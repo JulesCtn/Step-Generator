@@ -1,0 +1,71 @@
+----------------------------------------------------------------------------------
+-- Author:          Jules CONTADIN 
+--
+-- Create Date:     15.07.2024 13:28
+-- Module Name:     main - Behavioral
+-- Target Devices:  MachXO3LF-9400C-6BG484C
+-- Description: 
+-- 			Main module regrouping "recep_spi.vhd" and "step_generator.vhd". Main is a SPI slave module generating steps.
+--		This module receive the ARR value in SPI mode 0 (MSB first), user can define ARR max length (DATA_BITS
+--		default is 32). User must define PULSE_WIDTH (in us) and FREQ_FPGA (in MHz) in order to calculate the
+--		minimum value of ARR. Default is PULSE_WIDTH = 2 and FREQ_FPGA = 400.
+-- Next update:		Linear interpolation / Direction (input dir_i)
+----------------------------------------------------------------------------------
+-- 			///// !!! \\\\\ WORK IN PROGRESS ///// !!! \\\\\
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+
+entity main is
+	generic(
+		constant DATA_BITS:		integer := 32;
+		constant PULSE_WIDTH:	integer := 2;
+		constant FREQ_FPGA:		integer := 400
+        );
+    Port(
+        clk_i:		in std_logic;
+		cpt_clk_i:	in std_logic;
+		reset_n_i:	in std_logic;
+		mosi_i:		in std_logic;
+		cs_i:		in std_logic;
+		step_o:		out std_logic
+        );
+end main;
+
+architecture Behavioral of main is
+-- Components
+	component recep_spi is 
+	generic(		
+		constant DATA_BITS	: integer
+		);
+	port (
+		clk_i:		in std_logic;
+		reset_n_i:	in std_logic;
+		mosi_i:		in std_logic;
+		cs_i:		in std_logic;
+		data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
+		data_rdy_o:	out std_logic
+	);
+	end component;
+	
+	component step_generator is 
+	generic(
+		constant DATA_BITS:		integer;
+		constant PULSE_WIDTH:	integer;
+		constant FREQ_FPGA:		integer
+		);
+	Port(
+		spi_clk_i:		in std_logic;
+		cpt_clk_i:		in std_logic;
+		reset_n_i:	in std_logic;
+		arr_n_i:		in std_logic_vector(DATA_BITS-1 downto 0);
+		step_o:			out std_logic
+		);
+	end component;
+	
+-- Signals
+begin
+-- Process
+	main_proc : process(clk_i, reset_n_i)
+	begin
+	end process;
+end Behavioral;
