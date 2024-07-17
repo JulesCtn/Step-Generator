@@ -5,10 +5,10 @@
 -- Module Name:     recep_spi - Behavioral
 -- Target Devices:  MachXO3LF-9400C
 -- Description: 
---      Receive a SPI mode 0 databus (MSB first) and store it into an output register.
---	(Update 17/07/2024) : Data bus is DATA_BITS long (modifiable).
+--      Receive an SPI mode 0 data bus (MSB first) and store it in an output register.
+--	(Update 17/07/2024) : Data bus lenght is DATA_BITS(modifiable).
 --
--- Exemple : It takes 35ms to send a 32 bits databus and store it.
+-- Example : It takes 35ms to send a 32-bit data bus and store it.
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
