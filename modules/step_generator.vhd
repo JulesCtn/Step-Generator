@@ -5,11 +5,11 @@
 -- Module Name:     step_generator - Behavioral
 -- Target Devices:  MachXO3LF-9400C-6BG484C
 -- Description: 
---			This is an ARR (Auto Reload Register) that generate steps. ARR_MIN is calculated 
+--			This is an ARR (Auto Reload Register) that generates steps. ARR_MIN is calculated 
 --		depending on the user's defnition:
---			- PULSE_WIDTH is the width of one step, default is 2 (in us);
+--			- PULSE_WIDTH is the width of one step, default is 2 (in µs);
 --			- FREQ_FPGA is the internal frequency of the FPGA, default is 400 (in MHz).
---		User have to keep a DATA_BITS value large enough to let the down-counter reach user's max ARR. 
+--		The user has to keep a DATA_BITS value large enough to let the down-counter reach user's max ARR. 
 -- Next update:		Linear interpolation / Direction
 ----------------------------------------------------------------------------------
 library IEEE;
@@ -19,7 +19,7 @@ use IEEE.STD_LOGIC_ARITH.ALL;
 entity step_generator is
     generic(
 		constant DATA_BITS:		integer := 32;		-- Number of bits to support ARR_MAX
-		constant PULSE_WIDTH:	integer := 2; 		-- Width of one pulse (in us)
+		constant PULSE_WIDTH:	integer := 2; 		-- Width of one pulse (in µs)
 		constant FREQ_FPGA:		integer := 400 		-- Internal FPGA frequency (in MHz)
         );
     Port(
