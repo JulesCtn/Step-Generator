@@ -14,94 +14,94 @@ entity recep_spi_tb is
 end recep_spi_tb;
 
 architecture Behavioral of recep_spi_tb is
-    -- Component UUT
-    component recep_spi is 
-    generic(		
-	    constant DATA_BITS	: integer
-        );
-    port (
-        clk_i:		in std_logic;
-        reset_n_i:	in std_logic;
-        mosi_i:		in std_logic;
-        cs_i:		in std_logic;
-        data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
-        data_rdy_o:	out std_logic
-    );
-    end component;
-    
-	-- Clock period definitions
-    constant CLK_PERIOD : time := 1 ms; -- Période de l'horloge (1 kHz)
-	constant TRAM_BITS : integer := 32;
+	-- Component UUT
+	component recep_spi is 
+	generic(		
+		constant DATA_BITS	: integer
+		);
+	port (
+		clk_i:		in std_logic;
+		reset_n_i:	in std_logic;
+		mosi_i:		in std_logic;
+		cs_i:		in std_logic;
+		data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
+		data_rdy_o:	out std_logic
+	);
+	end component;
+
+	-- Clock period & generics definitions
+	constant CLK_PERIOD : time := 1 ms; -- Période de l'horloge (1 kHz)
+	constant DATA_BITS : integer := 32;
 	-- Inputs
-    signal clk_i : std_logic := '0';
-    signal reset_n_i : std_logic := '1';
-    signal mosi_i : std_logic := '0';
-    signal cs_i : std_logic := '1'; 
+	signal clk_i : std_logic := '0';
+	signal reset_n_i : std_logic := '1';
+	signal mosi_i : std_logic := '0';
+	signal cs_i : std_logic := '1'; 
 	-- Outputs
-    signal data_rdy_o : std_logic;
-    signal data_o : std_logic_vector(TRAM_BITS-1 downto 0);
-    
-    -- Function to send an SPI frame
-    procedure send_spi_frame(
-        constant data_frame : in std_logic_vector(TRAM_BITS-1 downto 0);
-        signal mosi : out std_logic
-    ) is
-    begin
-        for i in TRAM_BITS-1 downto 0 loop
-            mosi <= data_frame(i);
-            wait for clk_period;
-        end loop;
-    end procedure; 
+	signal data_rdy_o : std_logic;
+	signal data_o : std_logic_vector(DATA_BITS-1 downto 0);
+
+	-- Function to send an SPI frame
+	procedure send_spi_frame(
+		constant data_frame : in std_logic_vector(DATA_BITS-1 downto 0);
+		signal mosi : out std_logic
+	) is
+	begin
+		for i in DATA_BITS-1 downto 0 loop
+			mosi <= data_frame(i);
+			wait for clk_period;
+		end loop;
+	end procedure; 
 	
 begin
-    -- Unit Under Test
-    uut : recep_spi
+	-- Unit Under Test
+	uut : recep_spi
 		generic map (
-			DATA_BITS => TRAM_BITS
+			DATA_BITS => DATA_BITS
 		)
-        port map (
-            clk_i => clk_i,
-            reset_n_i => reset_n_i,
-            mosi_i => mosi_i,
-            cs_i => cs_i,
-            data_o => data_o,
-            data_rdy_o => data_rdy_o
-        );
-    -- Clock process
-    clk_process: process
-    begin
-        clk_i <= '0';
-        wait for CLK_PERIOD / 2;
-        clk_i <= '1';
-        wait for CLK_PERIOD / 2;
-    end process;
-    
-    -- Stimulus process
-    stimulus_process: process
-    begin
-        -- Reset
-        reset_n_i <= '0';
-        wait for 2 * CLK_PERIOD;
-        reset_n_i <= '1';
-        
-        -- Send first frame
-        cs_i <= '0';  
-        send_spi_frame (x"aaaaaaaa", mosi_i);
-        cs_i <= '1';
-        wait for 2 * CLK_PERIOD;
-        
-        -- Send second frame
-        cs_i <= '0';  
-        send_spi_frame (x"55555555", mosi_i);
-        cs_i <= '1';
-        wait for 2 * CLK_PERIOD;
-        
-        -- Send third frame
-        cs_i <= '0';  
-        send_spi_frame (x"cccccccc", mosi_i);
-        cs_i <= '1';
-        wait for 2 * CLK_PERIOD;
-        
+		port map (
+			clk_i => clk_i,
+			reset_n_i => reset_n_i,
+			mosi_i => mosi_i,
+			cs_i => cs_i,
+			data_o => data_o,
+			data_rdy_o => data_rdy_o
+		);
+	-- Clock process
+	clk_process: process
+	begin
+		clk_i <= '0';
+		wait for CLK_PERIOD / 2;
+		clk_i <= '1';
+		wait for CLK_PERIOD / 2;
+	end process;
+
+	-- Stimulus process
+	stimulus_process: process
+	begin
+		-- Reset
+		reset_n_i <= '0';
+		wait for 2 * CLK_PERIOD;
+		reset_n_i <= '1';
+		
+		-- Send first frame
+		cs_i <= '0';  
+		send_spi_frame (x"aaaaaaaa", mosi_i);
+		cs_i <= '1';
+		wait for 2 * CLK_PERIOD;
+		
+		-- Send second frame
+		cs_i <= '0';  
+		send_spi_frame (x"55555555", mosi_i);
+		cs_i <= '1';
+		wait for 2 * CLK_PERIOD;
+		
+		-- Send third frame
+		cs_i <= '0';  
+		send_spi_frame (x"cccccccc", mosi_i);
+		cs_i <= '1';
+		wait for 2 * CLK_PERIOD;
+		
 		wait;
-    end process;
+	end process;
 end Behavioral;
