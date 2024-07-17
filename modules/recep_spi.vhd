@@ -18,12 +18,12 @@ entity recep_spi is
 	    constant DATA_BITS  : integer := 32
         );
     port (
-        clk_i : in std_logic;
-        reset_n_i : in std_logic;
-        mosi_i : in std_logic;
-        cs_i : in std_logic;
-        data_o : out std_logic_vector(DATA_BITS-1 downto 0);
-        data_ready_o : out std_logic
+        clk_i:		in std_logic;
+        reset_n_i:	in std_logic;
+        mosi_i: 	in std_logic;
+        cs_i: 		in std_logic;
+        data_o: 	out std_logic_vector(DATA_BITS-1 downto 0);
+        data_rdy_o:	out std_logic
     );
 end recep_spi;
 
@@ -35,17 +35,17 @@ architecture Behavioral of recep_spi is
     signal sig_data    : STD_LOGIC_VECTOR(DATA_BITS-1 downto 0) := (others => '0');
 begin
 -- Process reception MOSI & stockage data_in
-process(clk_i, reset_n_i)
+recep_proc : process(clk_i, reset_n_i)
     begin
         if reset_n_i = '0' then
             state <= IDLE;
             sig_data <= (others => '0');
-            data_ready_o <= '0';
+            data_rdy_o <= '0';
             bit_count <= 0;
         elsif rising_edge(clk_i) then
             case state is
                 when IDLE =>
-                    data_ready_o <= '0';
+                    data_rdy_o <= '0';
                     bit_count <= 0;
                     sig_data <= (others => '0');
                     if cs_i = '0' then
@@ -67,7 +67,7 @@ process(clk_i, reset_n_i)
                     
                 when READY =>
                     data_o <= sig_data;
-                    data_ready_o <= '1';
+                    data_rdy_o <= '1';
                     state <= IDLE;
 
                 when others =>
