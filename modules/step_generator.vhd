@@ -5,8 +5,11 @@
 -- Module Name:     step_generator - Behavioral
 -- Target Devices:  MachXO3LF-9400C-6BG484C
 -- Description: 
---		This is an ARR (Auto Reload Register) that generate steps. Internal FPGA clock is 400MHz, step width is 2us.
---	You can define ARR_MAX and ARR_MIN, but be sure to keep a DATA_BITS large enough for ARR_MAX. 
+--			This is an ARR (Auto Reload Register) that generate steps. Internal FPGA clock is 400MHz, step width is 2us.
+--		ARR_MIN is calculated depending on the user's defnition:
+--			- PULSE_WIDTH is the width of one step (in us);
+--			- FREQ_FPGA is the internal frequency of the FPGA.
+--		User have to keep a DATA_BITS large enough to let the down-counter reach user's max ARR. 
 -- Next update:		Linear interpolation / Direction
 ----------------------------------------------------------------------------------
 library IEEE;
@@ -16,7 +19,6 @@ use IEEE.STD_LOGIC_ARITH.ALL;
 entity step_generator is
     generic(
 		constant DATA_BITS:		integer := 32;		-- Number of bits to support ARR_MAX
-		constant ARR_MAX:		integer := 680E3;	-- Maximum value of ARR
 		constant PULSE_WIDTH:	integer := 2; 		-- Width of one pulse (in us)
 		constant FREQ_FPGA:		integer := 400 		-- Internal FPGA frequency (in MHz)
         );
@@ -40,7 +42,7 @@ begin
 	down_cpt_proc : process(cpt_clk_i, reset_n_i)
 	begin
 		if reset_n_i = '0' then
-			counter <= 0; -- ARR_MAX;
+			counter <= 0;
 			sig_arr_n <= x"00000000";
 			step_o <= '0';
 		elsif rising_edge(cpt_clk_i) then
