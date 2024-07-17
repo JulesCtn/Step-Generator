@@ -5,10 +5,7 @@
 -- Module Name:     recep_spi_tb - Behavioral
 -- Target Devices:  MachXO3LF-9400C
 -- Description: 
---      Receive a SPI mode 0 databus (MSB first) and store it into an output register.
---	(Update 17/07/2024) : Data bus is DATA_BITS long (modifiable).
---
--- Exemple : It takes 35ms to send a 32 bits databus and store it.
+--      testbench for recep_spi
 -------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -23,12 +20,12 @@ architecture Behavioral of recep_spi_tb is
 	    constant DATA_BITS	: integer
         );
     port (
-        clk_i : in std_logic;
-        reset_n_i : in std_logic;
-        mosi_i : in std_logic;
-        cs_i : in std_logic;
-        data_o : out std_logic_vector(DATA_BITS-1 downto 0);
-        data_ready_o : out std_logic
+        clk_i:		in std_logic;
+        reset_n_i:	in std_logic;
+        mosi_i:		in std_logic;
+        cs_i:		in std_logic;
+        data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
+        data_rdy_o:	out std_logic
     );
     end component;
     
@@ -41,7 +38,7 @@ architecture Behavioral of recep_spi_tb is
     signal mosi_i : std_logic := '0';
     signal cs_i : std_logic := '1'; 
 	-- Outputs
-    signal data_ready_o : std_logic;
+    signal data_rdy_o : std_logic;
     signal data_o : std_logic_vector(TRAM_BITS-1 downto 0);
     
     -- Function to send an SPI frame
@@ -68,7 +65,7 @@ begin
             mosi_i => mosi_i,
             cs_i => cs_i,
             data_o => data_o,
-            data_ready_o => data_ready_o
+            data_rdy_o => data_rdy_o
         );
     -- Clock process
     clk_process: process
