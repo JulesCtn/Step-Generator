@@ -8,7 +8,7 @@
 --      Receive an SPI mode 0 data bus (MSB first) and store it in an output register.
 --	(Update 17/07/2024) : Data bus lenght is DATA_BITS(modifiable).
 --
--- Example : It takes 35ms to send a 32-bit data bus and store it.
+-- Example : With a 12MHz clock, it takes 2.78 µs to send a 32-bit data bus and store it.
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
