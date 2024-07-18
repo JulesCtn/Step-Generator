@@ -25,24 +25,25 @@ architecture Behavioral of step_generator_tb is
 	Port(
 		spi_clk_i:		in std_logic;
 		cpt_clk_i:		in std_logic;
-		reset_n_i:	in std_logic;
+		reset_n_i:		in std_logic;
 		arr_n_i:		in std_logic_vector(DATA_BITS-1 downto 0);
 		step_o:			out std_logic
 		);
 	end component;
 
 	-- Clock period & generics definitions
-	constant DATA_BITS: integer := 32;
-	constant PULSE_WIDTH: integer := 2; -- in us
-	constant FREQ_FPGA: integer := 400; -- in MHz
-	constant FPGA_CLK_PERIOD : time := 2.5 ns; 
-	constant SPI_CLK_PERIOD : time := 1 ms; -- Période de l'horloge (1 kHz)
+	constant DATA_BITS:			integer := 32;	-- in bits
+	constant PULSE_WIDTH:		integer := 2;	-- in us
+	constant FREQ_FPGA:			integer := 400;	-- in MHz
+	-- Clock period definitions
+	constant FPGA_CLK_PERIOD:	time := 2.5 ns; -- Internal clock peridoe
+	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
 
 	-- Inputs
-	signal reset_n_i : std_logic := '1';
-	signal spi_clk_i : std_logic := '0';
-	signal cpt_clk_i : std_logic := '0';
-	signal arr_n_i : std_logic_vector(31 downto 0) := x"00000000";
+	signal reset_n_i:	std_logic := '1';
+	signal spi_clk_i:	std_logic := '0';
+	signal cpt_clk_i:	std_logic := '0';
+	signal arr_n_i:		std_logic_vector(31 downto 0) := (others => '0');
 	-- Outputs
 	signal step_o : std_logic;
 	
@@ -61,7 +62,7 @@ begin
 			arr_n_i => arr_n_i,
 			step_o => step_o
 		);
-	-- External clock process (1 kHz)
+	-- External clock process (12 MHz)
 	spi_clk_process: process
 	begin
 		spi_clk_i <= '0';
@@ -88,12 +89,12 @@ begin
 		reset_n_i <= '1';
 		
 		-- Send first frame
-		arr_n_i <= conv_std_logic_vector(680e3, 32);
-		wait for 4 * SPI_CLK_PERIOD;
+		arr_n_i <= conv_std_logic_vector(680e3, 32); 
+		wait for 800e3 * FPGA_CLK_PERIOD;	-- Longer than 680e3, so down-count 2 time from 680e3
 		arr_n_i <= conv_std_logic_vector(480e3, 32);
-		wait for 4 * SPI_CLK_PERIOD;
+		wait for 680e3 * FPGA_CLK_PERIOD;	-- Still active after end of down-counts from 680e3: down-counting from 480e3
 		arr_n_i <= conv_std_logic_vector(280e3, 32);
-		wait for 3 * SPI_CLK_PERIOD;
+		wait for 200e3 * FPGA_CLK_PERIOD;	-- Too short, so no down-count from 280e3
 		arr_n_i <= conv_std_logic_vector(30e3, 32);
 		
 		wait;
