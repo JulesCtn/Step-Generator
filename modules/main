@@ -5,13 +5,17 @@
 -- Module Name:     main - Behavioral
 -- Target Devices:  MachXO3LF-9400C-6BG484C
 -- Description: 
--- 			Main module regrouping "recep_spi.vhd" and "step_generator.vhd". Main is a SPI slave module generating steps.
---		This module receive the ARR value in SPI mode 0 (MSB first), user can define ARR max length (DATA_BITS
---		default is 32). User must define PULSE_WIDTH (in us) and FREQ_FPGA (in MHz) in order to calculate the
---		minimum value of ARR. Default is PULSE_WIDTH = 2 and FREQ_FPGA = 400.
+-- 			Main is an SPI slave module regrouping "recep_spi.vhd" and "step_generator.vhd", and generating steps.
+--		This module receives the ARR value in SPI mode 0 (MSB first). The user can define the ARR max length (default DATA_BITS is 32). 
+--		The user must define PULSE_WIDTH (in µs) and FREQ_FPGA (in MHz) for the module to calculate the minimum value of ARR.
+--		Default values are PULSE_WIDTH = 2 and FREQ_FPGA = 400, which  result in ARR_MIN = 800 steps.
+-- Simulation limits:
+--			It takes DATA_BITS+1 clock cycle to receive a SPI frame. If the user want to send in burst mode (sending message without
+--		interruption, spi_cs_i kept low), the user must send a frame folowed by a random bit.
+--			Example: With an SPI clock of 12MHz, it takes at least 2.74 µs to receive a SPI frame.
+--		
 -- Next update:		Linear interpolation / Direction (input dir_i)
 ----------------------------------------------------------------------------------
--- 			///// !!! \\\\\ WORK IN PROGRESS ///// !!! \\\\\
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 
@@ -22,11 +26,11 @@ entity main is
 		constant FREQ_FPGA:		integer := 400
         );
     Port(
-        clk_i:		in std_logic;
+        spi_clk_i:	in std_logic;
 		cpt_clk_i:	in std_logic;
 		reset_n_i:	in std_logic;
-		mosi_i:		in std_logic;
-		cs_i:		in std_logic;
+		spi_mosi_i:	in std_logic;
+		spi_cs_i:	in std_logic;
 		step_o:		out std_logic
         );
 end main;
@@ -56,16 +60,53 @@ architecture Behavioral of main is
 	Port(
 		spi_clk_i:		in std_logic;
 		cpt_clk_i:		in std_logic;
-		reset_n_i:	in std_logic;
+		reset_n_i:		in std_logic;
 		arr_n_i:		in std_logic_vector(DATA_BITS-1 downto 0);
 		step_o:			out std_logic
 		);
 	end component;
 	
 -- Signals
+	signal arr_data_rdy:	std_logic;
+	signal arr_1, arr_2:	std_logic_vector(DATA_BITS-1 downto 0);
+
 begin
+-- Mapping
+	recep_spi_inst: recep_spi
+		generic map(
+			DATA_BITS => DATA_BITS
+		)
+		port map(
+			clk_i => spi_clk_i,
+			reset_n_i => reset_n_i,
+			mosi_i => spi_mosi_i,
+			cs_i => spi_cs_i,
+			data_o => arr_1,
+			data_rdy_o => arr_data_rdy
+		);
+		
+	step_generator_inst : step_generator
+		generic map(
+			DATA_BITS => DATA_BITS,
+			PULSE_WIDTH => PULSE_WIDTH,
+			FREQ_FPGA => FREQ_FPGA
+		)
+		port map(
+			spi_clk_i => spi_clk_i,
+			cpt_clk_i => cpt_clk_i,
+			reset_n_i => reset_n_i,
+			arr_n_i => arr_2,
+			step_o => step_o
+		);
 -- Process
-	main_proc : process(clk_i, reset_n_i)
+	main_proc : process(spi_clk_i, reset_n_i)
 	begin
+		if reset_n_i = '0' then
+			arr_2 <= (others => '0');
+		elsif rising_edge(spi_clk_i) then
+            if arr_data_rdy = '1' then
+				arr_2 <= arr_1;
+			end if;
+        end if;
 	end process;
 end Behavioral;
