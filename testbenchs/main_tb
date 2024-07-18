@@ -1,0 +1,130 @@
+----------------------------------------------------------------------------------
+-- Author:          Jules CONTADIN 
+-- 
+-- Create Date:     18.07.2024 10:21
+-- Module Name:     main_tb - Behavioral
+-- Target Devices:  MachXO3LF-9400C
+-- Description: 
+--		Testbench for main
+-------------------------------------------------------
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+
+entity main_tb is
+end main_tb;
+
+architecture Behavioral of main_tb is
+	-- Component UUT
+	component main is 
+	generic(
+		constant DATA_BITS:		integer := 32;
+		constant PULSE_WIDTH:	integer := 2;
+		constant FREQ_FPGA:		integer := 400
+        );
+    Port(
+        spi_clk_i:		in std_logic;
+		cpt_clk_i:		in std_logic;
+		reset_n_i:		in std_logic;
+		spi_mosi_i:		in std_logic;
+		spi_cs_i:		in std_logic;
+		step_o:			out std_logic
+        );
+	end component;
+
+	-- Generics definitions
+	constant DATA_BITS:			integer := 32;	-- in bits
+	constant PULSE_WIDTH:		integer := 2;	-- in us
+	constant FREQ_FPGA:			integer := 400;	-- in MHz
+	-- Clock period definitions
+	constant FPGA_CLK_PERIOD:	time := 2.5 ns;	-- Internal clock peridoe
+	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
+	-- Inputs
+	signal spi_clk_i:	std_logic := '0';
+	signal cpt_clk_i:	std_logic := '0';
+	signal reset_n_i:	std_logic := '1';
+	signal spi_mosi_i:	std_logic := '0';
+	signal spi_cs_i:	std_logic := '1';
+	-- Outputs
+	signal step_o: 		std_logic;
+	
+	-- Function to send an SPI frame
+	procedure send_spi_frame(
+		constant data_frame : in std_logic_vector(DATA_BITS-1 downto 0);
+		signal mosi : out std_logic
+	) is
+	begin
+		for i in DATA_BITS-1 downto 0 loop
+			mosi <= data_frame(i);
+			wait for SPI_CLK_PERIOD;
+		end loop;
+	end procedure; 
+	
+begin
+	-- Unit Under Test
+	uut : main
+		generic map (
+			DATA_BITS => DATA_BITS,
+			PULSE_WIDTH => PULSE_WIDTH,
+			FREQ_FPGA => FREQ_FPGA
+		)
+		port map (
+			spi_clk_i => spi_clk_i,
+			cpt_clk_i => cpt_clk_i,
+			reset_n_i => reset_n_i,
+			spi_mosi_i => spi_mosi_i,
+			spi_cs_i => spi_cs_i,
+			step_o => step_o
+		);
+	-- External clock process (12 MHz)
+	spi_clk_process: process
+	begin
+		spi_clk_i <= '0';
+		wait for SPI_CLK_PERIOD / 2;
+		spi_clk_i <= '1';
+		wait for SPI_CLK_PERIOD / 2;
+	end process;
+
+	-- Internal clock process (400 MHz)
+	cpt_clk_process: process
+	begin
+		cpt_clk_i <= '0';
+		wait for FPGA_CLK_PERIOD / 2;
+		cpt_clk_i <= '1';
+		wait for FPGA_CLK_PERIOD / 2;
+	end process;
+
+	-- Stimulus process
+	stimulus_process: process
+	begin
+		-- Reset
+		reset_n_i <= '0';
+		wait for SPI_CLK_PERIOD;
+		reset_n_i <= '1';
+		
+		-- Send first frame
+		spi_cs_i <= '0';
+		send_spi_frame (conv_std_logic_vector(680e3, 32), spi_mosi_i); -- It takes about 33 ms (1kHz clock) to receive a SPI frame
+		spi_cs_i <= '1';
+		wait for 800e3 * FPGA_CLK_PERIOD;	-- Longer than 680e3, so down-count 2 time from 680e3
+		
+		-- Second frame
+		spi_cs_i <= '0';
+		send_spi_frame (conv_std_logic_vector(480e3, 32), spi_mosi_i);
+		spi_cs_i <= '1';
+		wait for 680e3 * FPGA_CLK_PERIOD;	-- Still active after end of down-counts from 680e3: down-counting from 480e3
+		
+		-- Third frame
+		spi_cs_i <= '0';
+		send_spi_frame (conv_std_logic_vector(280e3, 32), spi_mosi_i);
+		spi_cs_i <= '1';
+		wait for 200e3 * FPGA_CLK_PERIOD;	-- Too short, so no down-count from 280e3
+		
+		-- Fourth frame
+		spi_cs_i <= '0';
+		send_spi_frame (conv_std_logic_vector(80e3, 32), spi_mosi_i);	
+		spi_cs_i <= '1';
+		
+		wait;
+	end process;
+end Behavioral;
