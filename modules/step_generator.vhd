@@ -36,23 +36,23 @@ architecture Behavioral of step_generator is
 	constant ARR_MIN: integer := FREQ_FPGA*PULSE_WIDTH; -- A step lasts from ARR_MIN to 0
 -- Signals
 	signal counter:		integer := 0;
-	signal sig_arr_n: 	std_logic_vector(DATA_BITS-1 downto 0); -- ARR(n)
 begin
 -- Down counting process
 	down_cpt_proc : process(cpt_clk_i, reset_n_i)
+	variable var_arr_n: std_logic_vector(DATA_BITS-1 downto 0); -- ARR(n)
 	begin
 		if reset_n_i = '0' then
 			counter <= 0;
-			sig_arr_n <= x"00000000";
+			var_arr_n := (others => '0');
 			step_o <= '0';
 		elsif rising_edge(cpt_clk_i) then
 			if counter = ARR_MIN then
 				step_o <= '1';
 				counter <= counter -1;
 			elsif counter = 0 then
-				sig_arr_n <= arr_n_i;
+				var_arr_n := arr_n_i;
 				step_o <= '0';
-				counter <= conv_integer(signed(sig_arr_n));
+				counter <= conv_integer(signed(var_arr_n));
 			else
 				counter <= counter -1;
 			end if;
