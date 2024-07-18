@@ -30,7 +30,7 @@ architecture Behavioral of recep_spi_tb is
 	end component;
 
 	-- Clock period & generics definitions
-	constant CLK_PERIOD : time := 1 ms; -- Période de l'horloge (1 kHz)
+	constant CLK_PERIOD : time := 83 ns; -- Période de l'horloge (12 MHz)
 	constant DATA_BITS : integer := 32;
 	-- Inputs
 	signal clk_i : std_logic := '0';
