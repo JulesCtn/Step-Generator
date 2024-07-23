@@ -10,7 +10,9 @@
 --			- PULSE_WIDTH is the width of one step, default is 2 (in µs);
 --			- FREQ_FPGA is the internal frequency of the FPGA, default is 400 (in MHz).
 --		The user has to keep a DATA_BITS value large enough to let the down-counter reach user's max ARR. 
--- Next update:		Linear interpolation / Direction
+--
+-- Update 2.0:		Linear interpolation (1 point)
+-- Next update:		Linear interpolation (N_POINT point) / Direction
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -20,7 +22,8 @@ entity step_generator is
     generic(
 		constant DATA_BITS:		integer := 32;		-- Number of bits to support ARR_MAX
 		constant PULSE_WIDTH:	integer := 2; 		-- Width of one pulse (in µs)
-		constant FREQ_FPGA:		integer := 400 		-- Internal FPGA frequency (in MHz)
+		constant FREQ_FPGA:		integer := 400; 	-- Internal FPGA frequency (in MHz)
+		constant N_POINT:		integer := 1		-- Number of point for interpolation
         );
     Port(
 		cpt_clk_i:		in std_logic;
@@ -38,7 +41,7 @@ architecture Behavioral of step_generator is
 	signal desired_arr:		integer; -- ARR(n)
 	signal next_arr:		integer; -- ARR(n+1)
 	signal nb_point:		std_logic;
-	--signal debug_calculated_arr:	integer;	-- Debugg signal
+	signal debug_calculated_arr:	integer;	-- Debugg signal
 begin
 -- Down counting process
 	down_cpt_proc : process(cpt_clk_i, reset_n_i)
@@ -64,14 +67,14 @@ begin
 					interpolated_arr := desired_arr + ((next_arr - desired_arr)/2); -- ARR = ARR0 + (ARR1 - ARR0)/?
 					counter <= interpolated_arr;
 					nb_point <= '1';
-					--debug_calculated_arr <= interpolated_arr;	-- Debugg signal
+					debug_calculated_arr <= interpolated_arr;	-- Debugg signal
 			-- Si 2nd point: goal point
 				else	
 					next_arr <= arr_i;
 					desired_arr <= next_arr;
 					counter <= desired_arr;
 					nb_point <= '0';
-					--debug_calculated_arr <= desired_arr;	-- Debugg signal
+					debug_calculated_arr <= desired_arr;	-- Debugg signal
 				end if;
 				
 			else
