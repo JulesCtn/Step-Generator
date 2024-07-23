@@ -23,10 +23,9 @@ architecture Behavioral of step_generator_tb is
 		constant FREQ_FPGA:		integer
 		);
 	Port(
-		spi_clk_i:		in std_logic;
 		cpt_clk_i:		in std_logic;
 		reset_n_i:		in std_logic;
-		arr_n_i:		in std_logic_vector(DATA_BITS-1 downto 0);
+		arr_i:			in integer;
 		step_o:			out std_logic
 		);
 	end component;
@@ -36,14 +35,12 @@ architecture Behavioral of step_generator_tb is
 	constant PULSE_WIDTH:		integer := 2;	-- in us
 	constant FREQ_FPGA:			integer := 400;	-- in MHz
 	-- Clock period definitions
-	constant FPGA_CLK_PERIOD:	time := 2.5 ns; -- Internal clock peridoe
-	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
+	constant FPGA_CLK_PERIOD:	time := 2.5 ns; -- Internal clock peridoe (400 MHz)
 
 	-- Inputs
 	signal reset_n_i:	std_logic := '1';
-	signal spi_clk_i:	std_logic := '0';
 	signal cpt_clk_i:	std_logic := '0';
-	signal arr_n_i:		std_logic_vector(31 downto 0) := (others => '0');
+	signal arr_i:		integer;
 	-- Outputs
 	signal step_o : std_logic;
 	
@@ -56,20 +53,11 @@ begin
 			FREQ_FPGA => FREQ_FPGA
 		)
 		port map (
-			spi_clk_i => spi_clk_i,
 			cpt_clk_i => cpt_clk_i,
 			reset_n_i => reset_n_i,
-			arr_n_i => arr_n_i,
+			arr_i => arr_i,
 			step_o => step_o
 		);
-	-- External clock process (12 MHz)
-	spi_clk_process: process
-	begin
-		spi_clk_i <= '0';
-		wait for SPI_CLK_PERIOD / 2;
-		spi_clk_i <= '1';
-		wait for SPI_CLK_PERIOD / 2;
-	end process;
 
 	-- Internal clock process (400 MHz)
 	cpt_clk_process: process
@@ -85,17 +73,17 @@ begin
 	begin
 		-- Reset
 		reset_n_i <= '0';
-		wait for SPI_CLK_PERIOD;
+		wait for FPGA_CLK_PERIOD;
 		reset_n_i <= '1';
 		
 		-- Send first frame
-		arr_n_i <= conv_std_logic_vector(680e3, 32); 
+		arr_i <= 680e3; 
 		wait for 800e3 * FPGA_CLK_PERIOD;	-- Longer than 680e3, so down-count 2 time from 680e3
-		arr_n_i <= conv_std_logic_vector(480e3, 32);
+		arr_i <= 480e3;
 		wait for 680e3 * FPGA_CLK_PERIOD;	-- Still active after end of down-counts from 680e3: down-counting from 480e3
-		arr_n_i <= conv_std_logic_vector(280e3, 32);
+		arr_i <= 280e3;
 		wait for 200e3 * FPGA_CLK_PERIOD;	-- Too short, so no down-count from 280e3
-		arr_n_i <= conv_std_logic_vector(30e3, 32);
+		arr_i <= 30e3;
 		
 		wait;
 	end process;
