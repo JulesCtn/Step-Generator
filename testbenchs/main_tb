@@ -5,11 +5,12 @@
 -- Module Name:     main_tb - Behavioral
 -- Target Devices:  MachXO3LF-9400C
 -- Description: 
---		Testbench for main
+--		Testbench for main, using the file arr_4_main_tb.txt
 -------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
+use STD.TEXTIO.ALL;
 
 entity main_tb is
 end main_tb;
@@ -24,7 +25,7 @@ architecture Behavioral of main_tb is
         );
     Port(
         spi_clk_i:		in std_logic;
-		cpt_clk_i:		in std_logic;
+		CLKI:			in std_logic;
 		reset_n_i:		in std_logic;
 		spi_mosi_i:		in std_logic;
 		spi_cs_i:		in std_logic;
@@ -37,7 +38,7 @@ architecture Behavioral of main_tb is
 	constant PULSE_WIDTH:		integer := 2;	-- in us
 	constant FREQ_FPGA:			integer := 400;	-- in MHz
 	-- Clock period definitions
-	constant FPGA_CLK_PERIOD:	time := 2.5 ns;	-- Internal clock peridoe
+	constant FPGA_CLK_PERIOD:	time := 125 ns;	-- Internal clock peridoe (8MHz)
 	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
 	-- Inputs
 	signal spi_clk_i:	std_logic := '0';
@@ -47,6 +48,9 @@ architecture Behavioral of main_tb is
 	signal spi_cs_i:	std_logic := '1';
 	-- Outputs
 	signal step_o: 		std_logic;
+	-- File
+	file fptr: text;
+	signal eof:				std_logic := '0';	-- End of file signal
 	
 	-- Function to send an SPI frame
 	procedure send_spi_frame(
@@ -70,7 +74,7 @@ begin
 		)
 		port map (
 			spi_clk_i => spi_clk_i,
-			cpt_clk_i => cpt_clk_i,
+			CLKI => cpt_clk_i,
 			reset_n_i => reset_n_i,
 			spi_mosi_i => spi_mosi_i,
 			spi_cs_i => spi_cs_i,
@@ -85,7 +89,7 @@ begin
 		wait for SPI_CLK_PERIOD / 2;
 	end process;
 
-	-- Internal clock process (400 MHz)
+	-- Internal clock process (400 MHz) //!\\ Change to 8MHz if PLL is working
 	cpt_clk_process: process
 	begin
 		cpt_clk_i <= '0';
@@ -95,36 +99,44 @@ begin
 	end process;
 
 	-- Stimulus process
-	stimulus_process: process
+	read_file_process: process
+		variable fstatus:			file_open_status;
+		
+		variable file_line:			line;
+		variable var_file_data:			integer;
+		variable var_true_input:	integer;
+	
 	begin
 		-- Reset
+		var_file_data := 0;
+		var_true_input := 0;
+		eof <= '0';
+		
 		reset_n_i <= '0';
-		wait for SPI_CLK_PERIOD;
+		wait for 814 ns;	-- PLL Init time
 		reset_n_i <= '1';
 		
-		-- Send first frame
-		spi_cs_i <= '0';
-		send_spi_frame (conv_std_logic_vector(680e3, 32), spi_mosi_i); -- It takes about 33 ms (1kHz clock) to receive a SPI frame
-		spi_cs_i <= '1';
-		wait for 800e3 * FPGA_CLK_PERIOD;	-- Longer than 680e3, so down-count 2 time from 680e3
+		file_open(fstatus, fptr, "arr_4_main_tb.txt", read_mode);
 		
-		-- Second frame
-		spi_cs_i <= '0';
-		send_spi_frame (conv_std_logic_vector(480e3, 32), spi_mosi_i);
-		spi_cs_i <= '1';
-		wait for 680e3 * FPGA_CLK_PERIOD;	-- Still active after end of down-counts from 680e3: down-counting from 480e3
-		
-		-- Third frame
-		spi_cs_i <= '0';
-		send_spi_frame (conv_std_logic_vector(280e3, 32), spi_mosi_i);
-		spi_cs_i <= '1';
-		wait for 200e3 * FPGA_CLK_PERIOD;	-- Too short, so no down-count from 280e3
-		
-		-- Fourth frame
-		spi_cs_i <= '0';
-		send_spi_frame (conv_std_logic_vector(80e3, 32), spi_mosi_i);	
-		spi_cs_i <= '1';
-		
+		while (not endfile(fptr)) loop
+			readline(fptr, file_line);		-- Read each line from the file
+			read(file_line, var_file_data);	-- Convert the line to a STD_LOGIC_VECTOR
+			
+			if var_file_data = 1 then
+				var_true_input := var_file_data;
+			else
+				var_true_input := var_file_data*FREQ_FPGA/275;	-- 275MHz: Freq of file
+			end if;
+			
+			spi_cs_i <= '0';
+			send_spi_frame(conv_std_logic_vector(var_true_input, 32), spi_mosi_i);	-- ARR frame
+			spi_cs_i <= '1';	
+			spi_mosi_i <= '0';	-- Reset after frame
+			wait for 1 ms;
+		end loop;
+		wait for SPI_CLK_PERIOD;
+		eof <= '1';
+		file_close(fptr);
 		wait;
 	end process;
 end Behavioral;
