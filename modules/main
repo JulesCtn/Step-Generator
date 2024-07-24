@@ -14,6 +14,7 @@
 --		interruption, spi_cs_i kept low), the user must send a frame folowed by a random bit.
 --			Example: With an SPI clock of 12MHz, it takes at least 2.74 µs to receive a SPI frame.
 --			The user must give an ARR >= ARR_MIN, otherwise step will stay low.
+--			Not tested: How much slower can the output of the PLL be compared to SCLK ?
 --		
 -- Update 2.0:		Linear Interpolation, and, internal clock at 400 MHz with PLL.
 --				Number of point for the interpolation: N_POINT
@@ -23,10 +24,6 @@
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.NUMERIC_STD.ALL;
---library MACHXO3L;
---use MACHXO3L.components.all;
---library work;
---use work.all;
 
 entity main is
 	generic(
@@ -36,12 +33,12 @@ entity main is
 		constant N_POINT:		integer := 1
         );
     Port(
-        spi_clk_i:	in std_logic;
-		CLKI:		in std_logic;
-		reset_n_i:	in std_logic;
-		spi_mosi_i:	in std_logic;
-		spi_cs_i:	in std_logic;
-		step_o:		out std_logic
+        spi_clk_i:		in std_logic;
+		pll_clki:		in std_logic;
+		reset_n_i:		in std_logic;
+		spi_mosi_i:		in std_logic;
+		spi_cs_i:		in std_logic;
+		step_o:			out std_logic
         );
 end main;
 
@@ -114,7 +111,7 @@ begin
 		);
 		
 	pll_inst : PLL
-    port map (CLKI=>CLKI, CLKOP=>cpt_clk);
+    port map (CLKI=>pll_clki, CLKOP=>cpt_clk);
 	
 -- Reiciving process
 	main_proc : process(cpt_clk, reset_n_i)
