@@ -44,17 +44,23 @@ architecture Behavioral of recep_spi_tb is
 	-- Function to send an SPI frame
 	procedure send_spi_frame(
 		constant data_frame : in std_logic_vector(DATA_BITS-1 downto 0);
-		signal mosi : out std_logic
+		signal mosi:	out std_logic;
+		signal clk:		out std_logic
 	) is
 	begin
 		for i in DATA_BITS-1 downto 0 loop
+			clk <= '0';
 			mosi <= data_frame(i);
-			wait for clk_period;
+			wait for CLK_PERIOD/2;
+			clk <= '1';
+			wait for CLK_PERIOD/2;
 		end loop;
+		clk <= '0';
+		mosi <= '0';
 	end procedure; 
 	
 begin
-	-- Unit Under Test
+	-- Instantiation of Unit Under Test
 	uut : recep_spi
 		generic map (
 			DATA_BITS => DATA_BITS
@@ -67,40 +73,43 @@ begin
 			data_o => data_o,
 			data_rdy_o => data_rdy_o
 		);
+		
 	-- Clock process
-	clk_process: process
-	begin
-		clk_i <= '0';
-		wait for CLK_PERIOD / 2;
-		clk_i <= '1';
-		wait for CLK_PERIOD / 2;
-	end process;
+	--spi_clk_process: process
+	--begin
+		--clk_i <= '0';
+        --wait until cs_i = '0';
+        --while cs_i = '0' loop
+            --clk_i <= '0';
+            --wait for CLK_PERIOD/2;
+            --clk_i <= '1';
+            --wait for CLK_PERIOD/2;
+        --end loop;
+        --clk_i <= '0';
+	--end process;
 
 	-- Stimulus process
 	stimulus_process: process
 	begin
 		-- Reset
 		reset_n_i <= '0';
-		wait for 2 * CLK_PERIOD;
+		wait for CLK_PERIOD;
 		reset_n_i <= '1';
+		wait for CLK_PERIOD;
 		
 		-- Send first frame
 		cs_i <= '0';  
-		send_spi_frame (x"aaaaaaaa", mosi_i);
+		wait for 2 * CLK_PERIOD;	-- Work with and without
+		send_spi_frame (x"aaaaaaaa", mosi_i, clk_i);
 		cs_i <= '1';
-		wait for 2 * CLK_PERIOD;
+		wait for 10 * CLK_PERIOD;
 		
-		-- Send second frame
+		-- Send 2nd & 3rd frame in burst mode, 10 CLK_PERIOD in between
 		cs_i <= '0';  
-		send_spi_frame (x"55555555", mosi_i);
+		send_spi_frame (x"55555555", mosi_i, clk_i);
+		wait for 10 * CLK_PERIOD;
+		send_spi_frame (x"cccccccc", mosi_i, clk_i);
 		cs_i <= '1';
-		wait for 2 * CLK_PERIOD;
-		
-		-- Send third frame
-		cs_i <= '0';  
-		send_spi_frame (x"cccccccc", mosi_i);
-		cs_i <= '1';
-		wait for 2 * CLK_PERIOD;
 		
 		wait;
 	end process;
