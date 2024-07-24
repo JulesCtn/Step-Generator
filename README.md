@@ -14,7 +14,7 @@ Useful pin:
   - 2 -> GND;
   - 20 -> 3.3V;
 | Pin Number | Ball location | Function |
-| ------------- | ------------- | ------------- |
+| --- | --- | ---------------------- |
 | 3 | F8  | SPI clock input |
 | 5  | F9  | SPI MOSI input |
 | 7  | E7  | SPI CS input |
