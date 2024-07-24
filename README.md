@@ -13,6 +13,8 @@ This is a SPI slave module (mode 0).
 Useful pin:
   - 2 -> GND;
   - 20 -> 3.3V;
+
+
 | Pin Number | Ball location | Function           |
 |------------|---------------|--------------------|
 | 3          | F8            | SPI clock input    |
