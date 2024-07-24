@@ -25,7 +25,7 @@ architecture Behavioral of main_tb is
         );
     Port(
         spi_clk_i:		in std_logic;
-		CLKI:			in std_logic;
+		pll_clki:		in std_logic;
 		reset_n_i:		in std_logic;
 		spi_mosi_i:		in std_logic;
 		spi_cs_i:		in std_logic;
@@ -38,11 +38,11 @@ architecture Behavioral of main_tb is
 	constant PULSE_WIDTH:		integer := 2;	-- in us
 	constant FREQ_FPGA:			integer := 400;	-- in MHz
 	-- Clock period definitions
-	constant FPGA_CLK_PERIOD:	time := 125 ns;	-- Internal clock peridoe (8MHz)
+	constant CLKI_CLK_PERIOD:	time := 125 ns;	-- Internal clock peridoe (8MHz)
 	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
 	-- Inputs
 	signal spi_clk_i:	std_logic := '0';
-	signal cpt_clk_i:	std_logic := '0';
+	signal pll_clki:	std_logic := '0';
 	signal reset_n_i:	std_logic := '1';
 	signal spi_mosi_i:	std_logic := '0';
 	signal spi_cs_i:	std_logic := '1';
@@ -50,19 +50,24 @@ architecture Behavioral of main_tb is
 	signal step_o: 		std_logic;
 	-- File
 	file fptr: text;
-	signal eof:				std_logic := '0';	-- End of file signal
 	
 	-- Function to send an SPI frame
 	procedure send_spi_frame(
 		constant data_frame : in std_logic_vector(DATA_BITS-1 downto 0);
-		signal mosi : out std_logic
+		signal mosi:	out std_logic;
+		signal clk:		out std_logic
 	) is
 	begin
 		for i in DATA_BITS-1 downto 0 loop
+			clk <= '0';
 			mosi <= data_frame(i);
-			wait for SPI_CLK_PERIOD;
+			wait for SPI_CLK_PERIOD/2;
+			clk <= '1';
+			wait for SPI_CLK_PERIOD/2;
 		end loop;
-	end procedure; 
+		clk <= '0';
+		mosi <= '0';
+	end procedure;  
 	
 begin
 	-- Unit Under Test
@@ -74,28 +79,20 @@ begin
 		)
 		port map (
 			spi_clk_i => spi_clk_i,
-			CLKI => cpt_clk_i,
+			pll_clki => pll_clki,
 			reset_n_i => reset_n_i,
 			spi_mosi_i => spi_mosi_i,
 			spi_cs_i => spi_cs_i,
 			step_o => step_o
 		);
-	-- External clock process (12 MHz)
-	spi_clk_process: process
+	
+	-- Internal clock process (8 MHz) //!\\ Is the PLL working ?
+	pll_input_clk_process: process
 	begin
-		spi_clk_i <= '0';
-		wait for SPI_CLK_PERIOD / 2;
-		spi_clk_i <= '1';
-		wait for SPI_CLK_PERIOD / 2;
-	end process;
-
-	-- Internal clock process (400 MHz) //!\\ Change to 8MHz if PLL is working
-	cpt_clk_process: process
-	begin
-		cpt_clk_i <= '0';
-		wait for FPGA_CLK_PERIOD / 2;
-		cpt_clk_i <= '1';
-		wait for FPGA_CLK_PERIOD / 2;
+		pll_clki <= '0';
+		wait for CLKI_CLK_PERIOD / 2;
+		pll_clki <= '1';
+		wait for CLKI_CLK_PERIOD / 2;
 	end process;
 
 	-- Stimulus process
@@ -103,39 +100,38 @@ begin
 		variable fstatus:			file_open_status;
 		
 		variable file_line:			line;
-		variable var_file_data:			integer;
+		variable var_file_data:		integer;
 		variable var_true_input:	integer;
 	
 	begin
-		-- Reset
+		-- Reset & init variable
 		var_file_data := 0;
 		var_true_input := 0;
-		eof <= '0';
 		
 		reset_n_i <= '0';
 		wait for 814 ns;	-- PLL Init time
 		reset_n_i <= '1';
 		
-		file_open(fstatus, fptr, "arr_4_main_tb.txt", read_mode);
 		
+		-- Open file
+		file_open(fstatus, fptr, "arr_4_main_tb.txt", read_mode);
+		-- Extract file values and use them as spi input
 		while (not endfile(fptr)) loop
 			readline(fptr, file_line);		-- Read each line from the file
 			read(file_line, var_file_data);	-- Convert the line to a STD_LOGIC_VECTOR
 			
-			if var_file_data = 1 then
+			if var_file_data = 1 then	-- Skip conversion calcul if input is 1		
 				var_true_input := var_file_data;
-			else
+			else						-- Convert ARR values from file(that are for a 275MHz processor) to our 400MHz speed
 				var_true_input := var_file_data*FREQ_FPGA/275;	-- 275MHz: Freq of file
 			end if;
 			
 			spi_cs_i <= '0';
-			send_spi_frame(conv_std_logic_vector(var_true_input, 32), spi_mosi_i);	-- ARR frame
-			spi_cs_i <= '1';	
-			spi_mosi_i <= '0';	-- Reset after frame
+			send_spi_frame(conv_std_logic_vector(var_true_input, 32), spi_mosi_i, spi_clk_i);	-- ARR frame
+			spi_cs_i <= '1';
 			wait for 1 ms;
 		end loop;
 		wait for SPI_CLK_PERIOD;
-		eof <= '1';
 		file_close(fptr);
 		wait;
 	end process;
