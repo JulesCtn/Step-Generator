@@ -86,7 +86,7 @@ begin
 			step_o => step_o
 		);
 	
-	-- Internal clock process (8 MHz) //!\\ Is the PLL working ?
+	-- Internal clock process (8 MHz) 
 	pll_input_clk_process: process
 	begin
 		pll_clki <= '0';
@@ -115,7 +115,8 @@ begin
 		
 		-- Open file
 		file_open(fstatus, fptr, "arr_4_main_tb.txt", read_mode);
-		-- Extract file values and use them as spi input
+		-- Extract file values and use them as SPI input
+		spi_cs_i <= '0';	-- BEgin burst mode
 		while (not endfile(fptr)) loop
 			readline(fptr, file_line);		-- Read each line from the file
 			read(file_line, var_file_data);	-- Convert the line to a STD_LOGIC_VECTOR
@@ -126,11 +127,12 @@ begin
 				var_true_input := var_file_data*FREQ_FPGA/275;	-- 275MHz: Freq of file
 			end if;
 			
-			spi_cs_i <= '0';
+			--spi_cs_i <= '0';	-- Without burst mode
 			send_spi_frame(conv_std_logic_vector(var_true_input, 32), spi_mosi_i, spi_clk_i);	-- ARR frame
-			spi_cs_i <= '1';
+			--spi_cs_i <= '1';
 			wait for 1 ms;
 		end loop;
+		spi_cs_i <= '1';	-- End burst mode
 		wait for SPI_CLK_PERIOD;
 		file_close(fptr);
 		wait;
