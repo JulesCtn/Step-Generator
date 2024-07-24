@@ -10,14 +10,13 @@
 --		The user must define PULSE_WIDTH (in µs) and FREQ_FPGA (in MHz) for the module to calculate the minimum value of ARR.
 --		Default values are PULSE_WIDTH = 2 and FREQ_FPGA = 400, which  result in ARR_MIN = 800 steps.
 -- Simulation limits:
---			It takes DATA_BITS+1 clock cycle to receive a SPI frame. If the user want to send in burst mode (sending message without
---		interruption, spi_cs_i kept low), the user must send a frame folowed by a random bit.
---			Example: With an SPI clock of 12MHz, it takes at least 2.74 µs to receive a SPI frame.
---			The user must give an ARR >= ARR_MIN, otherwise step will stay low.
---			Not tested: How much slower can the output of the PLL be compared to SCLK ?
+--			It takes DATA_BITS clock cycle to receive a SPI frame. If the user want to send in burst mode (sending message without
+--		interruption, spi_cs_i kept low).
+--			Example: With an SPI clock of 12MHz, it takes at least 2.67 µs to receive a 32-bits SPI frame.
+--			The user must send an ARR >= ARR_MIN, otherwise step will stay low.
 --		
 -- Update 2.0:		Linear Interpolation, and, internal clock at 400 MHz with PLL.
---				Number of point for the interpolation: N_POINT
+--				Generic for the number of point for the interpolation
 --				PLL has an initialisation timing of 813,75 ns.
 -- Next update:		Direction (input dir_i)
 ----------------------------------------------------------------------------------
@@ -29,8 +28,7 @@ entity main is
 	generic(
 		constant DATA_BITS:		integer := 32;
 		constant PULSE_WIDTH:	integer := 2;
-		constant FREQ_FPGA:		integer := 400;
-		constant N_POINT:		integer := 1
+		constant FREQ_FPGA:		integer := 400
         );
     Port(
         spi_clk_i:		in std_logic;
@@ -53,8 +51,7 @@ architecture Behavioral of main is
 		reset_n_i:	in std_logic;
 		mosi_i:		in std_logic;
 		cs_i:		in std_logic;
-		data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
-		data_rdy_o:	out std_logic
+		data_o:		out std_logic_vector(DATA_BITS-1 downto 0)
 	);
 	end component;
 	
@@ -77,7 +74,6 @@ architecture Behavioral of main is
 	end component;
 	
 -- Signals
-	signal arr_data_rdy:	std_logic;
 	signal arr_1:			std_logic_vector(DATA_BITS-1 downto 0);
 	signal arr_2: 			integer;
 	signal cpt_clk:			std_logic;
@@ -93,8 +89,7 @@ begin
 			reset_n_i => reset_n_i,
 			mosi_i => spi_mosi_i,
 			cs_i => spi_cs_i,
-			data_o => arr_1,
-			data_rdy_o => arr_data_rdy
+			data_o => arr_1
 		);
 		
 	step_generator_inst : step_generator
@@ -113,15 +108,13 @@ begin
 	pll_inst : PLL
     port map (CLKI=>pll_clki, CLKOP=>cpt_clk);
 	
--- Reiciving process
+-- Process
 	main_proc : process(cpt_clk, reset_n_i)
 	begin
 		if reset_n_i = '0' then
 			arr_2 <= 0;
 		elsif rising_edge(cpt_clk) then
-            if arr_data_rdy = '1' then
-				arr_2 <= to_integer(signed(arr_1));
-			end if;
+			arr_2 <= to_integer(signed(arr_1));
         end if;
 	end process;
 end Behavioral;
