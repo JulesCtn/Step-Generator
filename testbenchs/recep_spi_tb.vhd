@@ -24,8 +24,7 @@ architecture Behavioral of recep_spi_tb is
 		reset_n_i:	in std_logic;
 		mosi_i:		in std_logic;
 		cs_i:		in std_logic;
-		data_o:		out std_logic_vector(DATA_BITS-1 downto 0);
-		data_rdy_o:	out std_logic
+		data_o:		out std_logic_vector(DATA_BITS-1 downto 0)
 	);
 	end component;
 
@@ -38,7 +37,6 @@ architecture Behavioral of recep_spi_tb is
 	signal mosi_i : std_logic := '0';
 	signal cs_i : std_logic := '1'; 
 	-- Outputs
-	signal data_rdy_o : std_logic;
 	signal data_o : std_logic_vector(DATA_BITS-1 downto 0);
 
 	-- Function to send an SPI frame
@@ -70,8 +68,7 @@ begin
 			reset_n_i => reset_n_i,
 			mosi_i => mosi_i,
 			cs_i => cs_i,
-			data_o => data_o,
-			data_rdy_o => data_rdy_o
+			data_o => data_o
 		);
 
 	-- Stimulus process
