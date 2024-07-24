@@ -73,20 +73,6 @@ begin
 			data_o => data_o,
 			data_rdy_o => data_rdy_o
 		);
-		
-	-- Clock process
-	--spi_clk_process: process
-	--begin
-		--clk_i <= '0';
-        --wait until cs_i = '0';
-        --while cs_i = '0' loop
-            --clk_i <= '0';
-            --wait for CLK_PERIOD/2;
-            --clk_i <= '1';
-            --wait for CLK_PERIOD/2;
-        --end loop;
-        --clk_i <= '0';
-	--end process;
 
 	-- Stimulus process
 	stimulus_process: process
