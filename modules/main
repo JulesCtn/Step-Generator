@@ -1,4 +1,4 @@
-----------------------------------------------------------------------------------
+ ----------------------------------------------------------------------------------
 -- Author:          Jules CONTADIN 
 --
 -- Create Date:     15.07.2024 13:28
@@ -33,6 +33,7 @@ entity main is
     Port(
         spi_clk_i:		in std_logic;
 		pll_clki:		in std_logic;
+		data_clk:		in std_logic;
 		reset_n_i:		in std_logic;
 		spi_mosi_i:		in std_logic;
 		spi_cs_i:		in std_logic;
@@ -57,7 +58,6 @@ architecture Behavioral of main is
 	
 	component step_generator is 
 	generic(
-		constant DATA_BITS:		integer;
 		constant PULSE_WIDTH:	integer;
 		constant FREQ_FPGA:		integer
 		);
@@ -73,12 +73,19 @@ architecture Behavioral of main is
 		port (CLKI: in  std_logic; CLKOP: out  std_logic);
 	end component;
 	
+	component PLL100M
+    port (CLKI: in  std_logic; CLKOP: out  std_logic);
+end component;
+	
 -- Signals
 	signal arr_1:			std_logic_vector(DATA_BITS-1 downto 0);
 	signal arr_2: 			integer;
 	signal cpt_clk:			std_logic;
+	signal sample_clock:		std_logic;
 
 begin
+--The list of ARRs sent by SPI is used for an other project with a processor running at 275MHz, so we convert the input value to our frequency
+	--arr_2 <= to_integer(unsigned(arr_1))*FREQ_FPGA/275;	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
 -- Mapping
 	recep_spi_inst: recep_spi
 		generic map(
@@ -94,7 +101,6 @@ begin
 		
 	step_generator_inst : step_generator
 		generic map(
-			DATA_BITS => DATA_BITS,
 			PULSE_WIDTH => PULSE_WIDTH,
 			FREQ_FPGA => FREQ_FPGA
 		)
@@ -108,13 +114,15 @@ begin
 	pll_inst : PLL
     port map (CLKI=>pll_clki, CLKOP=>cpt_clk);
 	
--- Process
-	main_proc : process(cpt_clk, reset_n_i)
+	pll100m_inst : PLL100M	-- Sample clock for logic analyzer
+    port map (CLKI=>pll_clki, CLKOP=>sample_clock);
+	
+	main_proc : process(data_clk, reset_n_i)
 	begin
 		if reset_n_i = '0' then
 			arr_2 <= 0;
-		elsif rising_edge(cpt_clk) then
-			arr_2 <= to_integer(signed(arr_1));
-        end if;
+		elsif rising_edge(data_clk) then 
+			arr_2 <= to_integer(unsigned(arr_1)) * FREQ_FPGA / 275;	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
+		end if;	
 	end process;
 end Behavioral;
