@@ -9,7 +9,7 @@
 -------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
-use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.NUMERIC_STD.ALL;
 
 entity step_generator_tb is
 end step_generator_tb;
@@ -25,22 +25,22 @@ architecture Behavioral of step_generator_tb is
 	Port(
 		cpt_clk_i:		in std_logic;
 		reset_n_i:		in std_logic;
-		arr_i:			in integer;
+		arr_i:			in signed(DATA_BITS - 1 downto 0);
 		step_o:			out std_logic
 		);
 	end component;
 
 	-- Clock period & generics definitions
-	constant DATA_BITS:			integer := 32;	-- in bits
+	constant DATA_BITS:			integer := 32;
 	constant PULSE_WIDTH:		integer := 2;	-- in us
-	constant FREQ_FPGA:			integer := 400;	-- in MHz
+	constant FREQ_FPGA:			integer := 96;	-- in MHz
 	-- Clock period definitions
-	constant FPGA_CLK_PERIOD:	time := 2.5 ns; -- Internal clock peridoe (400 MHz)
+	constant FPGA_CLK_PERIOD:	time := 10.42 ns; -- Internal clock peridoe (96 MHz)
 
 	-- Inputs
-	signal reset_n_i:	std_logic := '1';
-	signal cpt_clk_i:	std_logic := '0';
-	signal arr_i:		integer;
+	signal reset_n_i:		std_logic := '1';
+	signal cpt_clk_i:		std_logic := '0';
+	signal arr_i:			signed(DATA_BITS - 1 downto 0) := (others => '0');
 	-- Outputs
 	signal step_o : std_logic;
 	
@@ -59,7 +59,7 @@ begin
 			step_o => step_o
 		);
 
-	-- Internal clock process (400 MHz)
+	-- Internal clock process (96 MHz)
 	cpt_clk_process: process
 	begin
 		cpt_clk_i <= '0';
@@ -77,13 +77,13 @@ begin
 		reset_n_i <= '1';
 		
 		-- Send first frame
-		arr_i <= 680e3; 
+		arr_i <= to_signed(680e3, DATA_BITS);
 		wait for 800e3 * FPGA_CLK_PERIOD;	-- Longer than 680e3, so down-count 2 time from 680e3
-		arr_i <= 480e3;
+		arr_i <= to_signed(480e3, DATA_BITS);
 		wait for 680e3 * FPGA_CLK_PERIOD;	-- Still active after end of down-counts from 680e3: down-counting from 480e3
-		arr_i <= 280e3;
+		arr_i <= to_signed(280e3, DATA_BITS);
 		wait for 200e3 * FPGA_CLK_PERIOD;	-- Too short, so no down-count from 280e3
-		arr_i <= 30e3;
+		arr_i <= to_signed(30e3, DATA_BITS);
 		
 		wait;
 	end process;
