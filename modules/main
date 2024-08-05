@@ -7,18 +7,18 @@
 -- Description: 
 -- 			Main is an SPI slave module regrouping "recep_spi.vhd" and "step_generator.vhd", and generating steps.
 --		This module receives the ARR value in SPI mode 0 (MSB first). The user can define the ARR max length (default DATA_BITS is 32). 
---		The user must define PULSE_WIDTH (in µs) and FREQ_FPGA (in MHz) for the module to calculate the minimum value of ARR.
---		Default values are PULSE_WIDTH = 2 and FREQ_FPGA = 400, which  result in ARR_MIN = 800 steps.
+--		The user must define PULSE_WIDTH (in µs) and FREQ_FPGA (in MHz) this is also the output PLL fréquency, that the user must regenerate.
+--		The minimum value of ARR will be calculated with those two generics.
+--		Default values are PULSE_WIDTH = 2 and FREQ_FPGA = 96, which  result in ARR_MIN = 192 steps.
 -- Simulation limits:
---			It takes DATA_BITS clock cycle to receive a SPI frame. If the user want to send in burst mode (sending message without
---		interruption, spi_cs_i kept low).
---			Example: With an SPI clock of 12MHz, it takes at least 2.67 µs to receive a 32-bits SPI frame.
---			The user must send an ARR >= ARR_MIN, otherwise step will stay low.
+--			It takes DATA_BITS clock cycle to receive a SPI frame. 
+--			Burst mode works(sending message without interruption, spi_cs_i kept low).
+--			The user must send an ARR >= ARR_MIN, otherwise the output "step" will stay low.
+--			PLL has an initialisation timing of 813,75 ns.
 --		
--- Update 2.0:		Linear Interpolation, and, internal clock at 400 MHz with PLL.
---				Generic for the number of point for the interpolation
---				PLL has an initialisation timing of 813,75 ns.
--- Next update:		Direction (input dir_i)
+-- Update 1.1:		The value of the PLL output can't exeed 96 MHz for timing reasons, if the board used is the MachXO3.
+--				
+-- Next update:		Linear interpolation / Direction (input dir_i)
 ----------------------------------------------------------------------------------
 library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
@@ -28,7 +28,7 @@ entity main is
 	generic(
 		constant DATA_BITS:		integer := 32;
 		constant PULSE_WIDTH:	integer := 2;
-		constant FREQ_FPGA:		integer := 400
+		constant FREQ_FPGA:		integer := 96
         );
     Port(
         spi_clk_i:		in std_logic;
@@ -58,13 +58,14 @@ architecture Behavioral of main is
 	
 	component step_generator is 
 	generic(
+		constant DATA_BITS:		integer;
 		constant PULSE_WIDTH:	integer;
 		constant FREQ_FPGA:		integer
 		);
 	Port(
 		cpt_clk_i:		in std_logic;
 		reset_n_i:		in std_logic;
-		arr_i:			in integer;
+		arr_i:			in signed(DATA_BITS-1 downto 0);
 		step_o:			out std_logic
 		);
 	end component;
@@ -73,19 +74,12 @@ architecture Behavioral of main is
 		port (CLKI: in  std_logic; CLKOP: out  std_logic);
 	end component;
 	
-	component PLL100M
-    port (CLKI: in  std_logic; CLKOP: out  std_logic);
-end component;
-	
 -- Signals
 	signal arr_1:			std_logic_vector(DATA_BITS-1 downto 0);
-	signal arr_2: 			integer;
+	signal arr_2: 			signed(DATA_BITS-1 downto 0);
 	signal cpt_clk:			std_logic;
-	signal sample_clock:		std_logic;
 
 begin
---The list of ARRs sent by SPI is used for an other project with a processor running at 275MHz, so we convert the input value to our frequency
-	--arr_2 <= to_integer(unsigned(arr_1))*FREQ_FPGA/275;	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
 -- Mapping
 	recep_spi_inst: recep_spi
 		generic map(
@@ -101,6 +95,7 @@ begin
 		
 	step_generator_inst : step_generator
 		generic map(
+			DATA_BITS => DATA_BITS,
 			PULSE_WIDTH => PULSE_WIDTH,
 			FREQ_FPGA => FREQ_FPGA
 		)
@@ -114,15 +109,13 @@ begin
 	pll_inst : PLL
     port map (CLKI=>pll_clki, CLKOP=>cpt_clk);
 	
-	pll100m_inst : PLL100M	-- Sample clock for logic analyzer
-    port map (CLKI=>pll_clki, CLKOP=>sample_clock);
-	
-	main_proc : process(data_clk, reset_n_i)
+	--The list of ARRs sent by SPI is used for an other project with a processor running at 275MHz, so we convert the input value to our frequency
+	cross_multiply_proc : process(data_clk, reset_n_i)
 	begin
 		if reset_n_i = '0' then
-			arr_2 <= 0;
+			arr_2 <= (others => '0');
 		elsif rising_edge(data_clk) then 
-			arr_2 <= to_integer(unsigned(arr_1)) * FREQ_FPGA / 275;	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
+			arr_2 <= to_signed((to_integer(unsigned(arr_1)) * FREQ_FPGA) / 275, DATA_BITS);	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
 		end if;	
 	end process;
 end Behavioral;
