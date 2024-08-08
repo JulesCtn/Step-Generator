@@ -26,9 +26,9 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity main is
 	generic(
-		constant DATA_BITS:		integer := 32;
+		constant DATA_BITS:		integer := 24;
 		constant PULSE_WIDTH:	integer := 2;
-		constant FREQ_FPGA:		integer := 96
+		constant FREQ_FPGA:		integer := 400
         );
     Port(
         spi_clk_i:		in std_logic;
@@ -65,7 +65,7 @@ architecture Behavioral of main is
 	Port(
 		cpt_clk_i:		in std_logic;
 		reset_n_i:		in std_logic;
-		arr_i:			in signed(DATA_BITS-1 downto 0);
+		arr_i:			in unsigned(DATA_BITS-1 downto 0);
 		step_o:			out std_logic
 		);
 	end component;
@@ -76,10 +76,12 @@ architecture Behavioral of main is
 	
 -- Signals
 	signal arr_1:			std_logic_vector(DATA_BITS-1 downto 0);
-	signal arr_2: 			signed(DATA_BITS-1 downto 0);
+	signal arr_2: 			unsigned(DATA_BITS-1 downto 0);
 	signal cpt_clk:			std_logic;
 
 begin
+--The list of ARRs sent by SPI is used for an other project with a processor running at 275MHz, so we convert the input value to our frequency
+	arr_2 <= to_unsigned((to_integer(unsigned(arr_1)) * FREQ_FPGA) / 275, DATA_BITS);	-- Cross-multiply ARR from file freq to FREQ_FPGA
 -- Mapping
 	recep_spi_inst: recep_spi
 		generic map(
@@ -110,12 +112,12 @@ begin
     port map (CLKI=>pll_clki, CLKOP=>cpt_clk);
 	
 	--The list of ARRs sent by SPI is used for an other project with a processor running at 275MHz, so we convert the input value to our frequency
-	cross_multiply_proc : process(data_clk, reset_n_i)
-	begin
-		if reset_n_i = '0' then
-			arr_2 <= (others => '0');
-		elsif rising_edge(data_clk) then 
-			arr_2 <= to_signed((to_integer(unsigned(arr_1)) * FREQ_FPGA) / 275, DATA_BITS);	-- Cross-multiply ARR from file freq to FREQ_FPGA (default is 400 MHz)
-		end if;	
-	end process;
+	--cross_multiply_proc : process(data_clk, reset_n_i)
+	--begin
+		--if reset_n_i = '0' then
+			--arr_2 <= (others => '0');
+		--elsif rising_edge(data_clk) then 
+			--arr_2 <= to_signed((to_integer(unsigned(arr_1)) * FREQ_FPGA) / 275, DATA_BITS);	-- Cross-multiply ARR from file freq to FREQ_FPGA
+		--end if;	
+	--end process;
 end Behavioral;
