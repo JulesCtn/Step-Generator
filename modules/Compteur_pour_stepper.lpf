@@ -1,16 +1,15 @@
+rvl_alias "pll_clki" "pll_clki";
+RVL_ALIAS "pll_clki" "pll_clki"; 
 BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;
-# Internal clock (8 MHz)
-LOCATE COMP "cpt_clk_i" SITE "L1" ;
-IOBUF PORT "cpt_clk_i" IO_TYPE=LVCMOS33 ;
-FREQUENCY PORT "spi_clk_i" 8.000000 MHz ;
-USE PRIMARY NET "cpt_clk_i_c" ;				#(optional)
+# Lattice Preference FIle
+# Internal clock (8 MHz) 
+LOCATE COMP "pll_clki" SITE "L1" ;
+IOBUF PORT "pll_clki" IO_TYPE=LVCMOS33 ;
 # External SPI clock
 LOCATE COMP "spi_clk_i" SITE "F8" ;
 IOBUF PORT "spi_clk_i" IO_TYPE=LVCMOS33 ;
-FREQUENCY PORT "spi_clk_i" 12.000000 MHz ;
 # Inputs
-IOBUF PORT "spi_clk_i" IO_TYPE=LVCMOS33 ;
 LOCATE COMP "reset_n_i" SITE "G8" ;
 IOBUF PORT "reset_n_i" IO_TYPE=LVCMOS33 ;
 LOCATE COMP "spi_cs_i" SITE "E7" ;
@@ -20,3 +19,5 @@ IOBUF PORT "spi_mosi_i" IO_TYPE=LVCMOS33 ;
 # Outputs
 LOCATE COMP "step_o" SITE "E6" ;
 IOBUF PORT "step_o" IO_TYPE=LVCMOS33 ;
+# Other (Debugg...)
+BLOCK JTAGPATHS ;
