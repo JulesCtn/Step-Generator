@@ -19,9 +19,9 @@ architecture Behavioral of main_tb is
 	-- Component UUT
 	component main is 
 	generic(
-		constant DATA_BITS:		integer := 32;
-		constant PULSE_WIDTH:	integer := 2;
-		constant FREQ_FPGA:		integer := 400
+		constant DATA_BITS:		integer ;
+		constant PULSE_WIDTH:	integer ;
+		constant FREQ_FPGA:		integer 
         );
     Port(
         spi_clk_i:		in std_logic;
@@ -34,12 +34,13 @@ architecture Behavioral of main_tb is
 	end component;
 
 	-- Generics definitions
-	constant DATA_BITS:			integer := 32;	-- in bits
+	constant DATA_BITS:			integer := 24;	-- in bits
 	constant PULSE_WIDTH:		integer := 2;	-- in us
 	constant FREQ_FPGA:			integer := 400;	-- in MHz
 	-- Clock period definitions
 	constant CLKI_CLK_PERIOD:	time := 125 ns;	-- Internal clock peridoe (8MHz)
 	constant SPI_CLK_PERIOD:	time := 83 ns;	-- SPI clock periode (12 MHz)
+	constant DATA_CLK_PERIOD:	time := 1 ms;	-- time between each spi frame
 	-- Inputs
 	signal spi_clk_i:	std_logic := '0';
 	signal pll_clki:	std_logic := '0';
@@ -101,38 +102,29 @@ begin
 		
 		variable file_line:			line;
 		variable var_file_data:		integer;
-		variable var_true_input:	integer;
 	
 	begin
 		-- Reset & init variable
 		var_file_data := 0;
-		var_true_input := 0;
 		
 		reset_n_i <= '0';
 		wait for 814 ns;	-- PLL Init time
 		reset_n_i <= '1';
 		
-		
 		-- Open file
 		file_open(fstatus, fptr, "arr_4_main_tb.txt", read_mode);
 		-- Extract file values and use them as SPI input
-		spi_cs_i <= '0';	-- BEgin burst mode
+		--spi_cs_i <= '0';	-- Begin burst mode
 		while (not endfile(fptr)) loop
 			readline(fptr, file_line);		-- Read each line from the file
 			read(file_line, var_file_data);	-- Convert the line to a STD_LOGIC_VECTOR
 			
-			if var_file_data = 1 then	-- Skip conversion calcul if input is 1		
-				var_true_input := var_file_data;
-			else						-- Convert ARR values from file(that are for a 275MHz processor) to our 400MHz speed
-				var_true_input := var_file_data*FREQ_FPGA/275;	-- 275MHz: Freq of file
-			end if;
-			
-			--spi_cs_i <= '0';	-- Without burst mode
-			send_spi_frame(conv_std_logic_vector(var_true_input, 32), spi_mosi_i, spi_clk_i);	-- ARR frame
-			--spi_cs_i <= '1';
-			wait for 1 ms;
+			spi_cs_i <= '0';	-- Without burst mode
+			send_spi_frame(conv_std_logic_vector(var_file_data, DATA_BITS), spi_mosi_i, spi_clk_i);	-- ARR frame
+			spi_cs_i <= '1';	-- End msg withour burst mode
+			wait for DATA_CLK_PERIOD;
 		end loop;
-		spi_cs_i <= '1';	-- End burst mode
+		--spi_cs_i <= '1';	-- End burst mode
 		wait for SPI_CLK_PERIOD;
 		file_close(fptr);
 		wait;
